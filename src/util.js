@@ -47,16 +47,33 @@ export function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-export function glow(ctx, x, y, r, color, alpha = 1) {
-  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-  g.addColorStop(0, color);
-  g.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.save();
+// Radial glows are pre-rendered once per color and stamped with drawImage:
+// building a gradient every frame is one of the most expensive canvas calls.
+const glowCache = new Map();
+function glowSprite(color) {
+  let c = glowCache.get(color);
+  if (c) return c;
+  c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grd.addColorStop(0, color);
+  grd.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 128, 128);
+  glowCache.set(color, c);
+  return c;
+}
+
+export function glow(ctx, x, y, r, color, alpha = 1, ry = r) {
+  if (r <= 0 || alpha <= 0) return;
+  const pa = ctx.globalAlpha;
+  const pc = ctx.globalCompositeOperation;
   ctx.globalCompositeOperation = 'lighter';
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = g;
-  ctx.fillRect(x - r, y - r, r * 2, r * 2);
-  ctx.restore();
+  ctx.globalAlpha = Math.min(1, alpha);
+  ctx.drawImage(glowSprite(color), x - r, y - ry, r * 2, ry * 2);
+  ctx.globalAlpha = pa;
+  ctx.globalCompositeOperation = pc;
 }
 
 export function wrapText(ctx, text, maxWidth) {

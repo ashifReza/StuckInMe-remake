@@ -9,6 +9,7 @@ import { drawBootScreen, drawTitle, drawMenu, menuItemRects, drawControls, drawS
 import { drawBoy } from './art.js';
 
 const SCORE_KEY = 'stuckinme.scores';
+const MAX_RENDER_W = 1920;
 const NEW_RUN = { score: 0, powers: [], maxHp: 5, soul: 0 };
 
 class App {
@@ -32,9 +33,12 @@ class App {
     const s = Math.min(window.innerWidth / W, window.innerHeight / H);
     this.canvas.style.width = `${Math.floor(W * s)}px`;
     this.canvas.style.height = `${Math.floor(H * s)}px`;
-    this.canvas.width = Math.floor(W * s * dpr);
-    this.canvas.height = Math.floor(H * s * dpr);
-    this.scale = s * dpr;
+    // Cap the backing store at 1920px wide: a full-screen retina canvas would
+    // be ~3000px wide and cost 3-4x the fill time for no visible gain here.
+    const rs = Math.min(s * dpr, MAX_RENDER_W / W);
+    this.canvas.width = Math.floor(W * rs);
+    this.canvas.height = Math.floor(H * rs);
+    this.scale = rs;
   }
 
   // ---------- transitions ----------
@@ -207,7 +211,6 @@ class App {
   draw() {
     const ctx = this.ctx;
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
-    ctx.imageSmoothingQuality = 'high';
     switch (this.state) {
       case 'boot':
         drawBootScreen(ctx, this.t);

@@ -159,6 +159,21 @@ const SHAPES = {
   },
 };
 
+let vig = null;
+function vignette() {
+  if (vig) return vig;
+  vig = document.createElement('canvas');
+  vig.width = W;
+  vig.height = H;
+  const g = vig.getContext('2d');
+  const v = g.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.95);
+  v.addColorStop(0, 'rgba(0,0,0,0)');
+  v.addColorStop(1, 'rgba(0,0,0,0.6)');
+  g.fillStyle = v;
+  g.fillRect(0, 0, W, H);
+  return vig;
+}
+
 export class Background {
   constructor(level, seed) {
     this.level = level;
@@ -176,10 +191,67 @@ export class Background {
     for (let x = 0; x < fgW; x += 60 + rng() * 160) {
       this.fg.push({ x, h: 30 + rng() * (rng() < 0.15 ? 160 : 60), n: 4 + Math.floor(rng() * 6), lean: (rng() - 0.5) * 0.6 });
     }
+    this.sky = this.paintSky();
+    this.ray = this.paintRay();
+    this.front = this.paintFoliage(fgW);
     this.motes = [];
     for (let i = 0; i < 70; i++) {
       this.motes.push({ x: rng() * W, y: rng() * GROUND, s: 0.6 + rng() * 2, ph: rng() * 10, d: 0.3 + rng() * 0.9 });
     }
+  }
+
+  paintSky() {
+    const c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    const g = c.getContext('2d');
+    const sky = g.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, this.theme.sky[0]);
+    sky.addColorStop(1, this.theme.sky[1]);
+    g.fillStyle = sky;
+    g.fillRect(0, 0, W, H);
+    return c;
+  }
+
+  // one slanted god-ray; drawn at several offsets each frame
+  paintRay() {
+    const c = document.createElement('canvas');
+    c.width = 420;
+    c.height = H;
+    const g = c.getContext('2d');
+    const x = 325;
+    const grd = g.createLinearGradient(x, 0, x - 260, H);
+    grd.addColorStop(0, hexA(this.theme.accent, 0.07));
+    grd.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grd;
+    g.beginPath();
+    g.moveTo(x, 0);
+    g.lineTo(x + 90, 0);
+    g.lineTo(x - 170, H);
+    g.lineTo(x - 320, H);
+    g.fill();
+    return c;
+  }
+
+  paintFoliage(fgW) {
+    const FH = 260;
+    const c = document.createElement('canvas');
+    c.width = Math.ceil(fgW) + 200;
+    c.height = FH;
+    const g = c.getContext('2d');
+    g.fillStyle = '#010205';
+    for (const f of this.fg) {
+      for (let k = 0; k < f.n; k++) {
+        const bx = f.x + k * 7 + 100;
+        const h = Math.min(FH - 4, f.h * (0.6 + ((k * 37) % 10) / 25));
+        g.beginPath();
+        g.moveTo(bx - 4, FH);
+        g.quadraticCurveTo(bx + f.lean * h * 0.5, FH - h * 0.6, bx + f.lean * h, FH - h);
+        g.quadraticCurveTo(bx + f.lean * h * 0.4 + 3, FH - h * 0.5, bx + 5, FH);
+        g.fill();
+      }
+    }
+    return c;
   }
 
   paint(p, color, near, rng, blur) {
@@ -202,11 +274,7 @@ export class Background {
 
   drawBack(ctx, camX, t) {
     const th = this.theme;
-    const sky = ctx.createLinearGradient(0, 0, 0, H);
-    sky.addColorStop(0, th.sky[0]);
-    sky.addColorStop(1, th.sky[1]);
-    ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, W, H);
+    ctx.drawImage(this.sky, 0, 0);
 
     // pale moon / dream-light
     const mx = 980 - camX * 0.05;
@@ -224,16 +292,7 @@ export class Background {
     ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < 4; i++) {
       const x = ((i * 380 - camX * 0.3 + Math.sin(t * 0.2 + i) * 40) % (W + 400) + W + 400) % (W + 400) - 200;
-      const grd = ctx.createLinearGradient(x, 0, x - 260, H);
-      grd.addColorStop(0, hexA(th.accent, 0.07));
-      grd.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = grd;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x + 90, 0);
-      ctx.lineTo(x - 170, H);
-      ctx.lineTo(x - 320, H);
-      ctx.fill();
+      ctx.drawImage(this.ray, x - 325, 0);
     }
     ctx.restore();
 
@@ -260,19 +319,12 @@ export class Background {
   }
 
   drawFog(ctx, camX, t, p, a) {
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < 5; i++) {
       const span = W + 800;
       const x = (((i * 420 - camX * p + t * 12 * (i % 2 ? 1 : -0.6)) % span) + span) % span - 400;
       const y = 470 + (i % 3) * 50;
-      const g = ctx.createRadialGradient(x, y, 0, x, y, 420);
-      g.addColorStop(0, hexA(this.theme.mote, a));
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(x - 420, y - 220, 840, 440);
+      glow(ctx, x, y, 420, hexA(this.theme.mote, a), 1, 220);
     }
-    ctx.restore();
   }
 
   // ground is drawn in world space (camera already applied)
@@ -314,28 +366,8 @@ export class Background {
     }
     ctx.restore();
 
-    // foreground foliage silhouettes
-    ctx.fillStyle = '#010205';
-    for (const f of this.fg) {
-      const x = f.x - camX * FG_P;
-      if (x < -200 || x > W + 200) continue;
-      for (let k = 0; k < f.n; k++) {
-        const bx = x + k * 7;
-        const sway = Math.sin(t * 1.4 + f.x + k) * 4;
-        const h = f.h * (0.6 + ((k * 37) % 10) / 25);
-        ctx.beginPath();
-        ctx.moveTo(bx - 4, H);
-        ctx.quadraticCurveTo(bx + f.lean * h * 0.5, H - h * 0.6, bx + f.lean * h + sway, H - h);
-        ctx.quadraticCurveTo(bx + f.lean * h * 0.4 + 3, H - h * 0.5, bx + 5, H);
-        ctx.fill();
-      }
-    }
-
-    // vignette
-    const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.95);
-    v.addColorStop(0, 'rgba(0,0,0,0)');
-    v.addColorStop(1, 'rgba(0,0,0,0.6)');
-    ctx.fillStyle = v;
-    ctx.fillRect(0, 0, W, H);
+    // foreground foliage silhouettes (pre-rendered)
+    ctx.drawImage(this.front, -camX * FG_P - 100, H - this.front.height);
+    ctx.drawImage(vignette(), 0, 0);
   }
 }
