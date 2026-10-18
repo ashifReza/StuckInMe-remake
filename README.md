@@ -6,6 +6,15 @@ A browser remake of my original iGraphics/C++ game, with a Hollow Knight-inspire
 
 ## Play
 
+**Play online: https://ashifreza.github.io/StuckInMe-remake/**
+
+- Free to play, with no account or install. Runs in any modern desktop browser (Chrome, Edge, Firefox, Safari).
+- Needs a keyboard, so it works on desktops and laptops only; there are no touch controls yet.
+- High scores (the Hall of Dreamers) are saved in each player's own browser, not on a shared leaderboard.
+- Best with sound on. Press M to mute.
+
+### Run it locally
+
 ES modules need a local web server (opening `index.html` directly won't work):
 
 ```bash
