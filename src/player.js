@@ -5,7 +5,7 @@ import { drawBoy } from './art.js';
 
 const SPEED = 360;
 const JUMP_V = -840;
-const DJUMP_V = -730;
+const DJUMP_V = -840; // ~160px of extra height, enough to reach the ledges from the floor
 const DASH_V = 940;
 export const SOUL_COST = 33;
 export const SOUL_MAX = 99;
@@ -163,7 +163,7 @@ export class Player {
         g.particles.burst(this.cx, this.y + this.h, 8, { speed: 120, angle: -Math.PI / 2, spread: 2.4, color: '#9cc9e8', life: 0.35, size: 2.5 });
       } else if (this.airJumps > 0 && this.dashT <= 0) {
         this.airJumps--;
-        this.vy = DJUMP_V;
+        this.vy = Math.min(this.vy, DJUMP_V); // never slower than you were already rising
         this.jumpBuf = 0;
         Audio.play('djump');
         g.particles.ring(this.cx, this.y + this.h, '#cfe9ff', 40, 0.35);
