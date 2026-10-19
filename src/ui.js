@@ -1,5 +1,5 @@
 import { W, H, roundRect, glow, FONT_TITLE, FONT_BODY, clamp } from './util.js';
-import { POWERS, LEVELS } from './levels.js';
+import { POWERS, LEVELS, DIFFICULTIES, powerCost } from './levels.js';
 import { SOUL_COST, SOUL_MAX } from './player.js';
 import { BOSS_NAME } from './boss.js';
 import { drawBoy } from './art.js';
@@ -93,6 +93,11 @@ export function drawHUD(ctx, g) {
     ctx.fillText(['E', 'M', 'B', 'H'][i], x, y + 5);
   });
 
+  ctx.font = `700 11px ${FONT_TITLE}`;
+  ctx.fillStyle = 'rgba(220,225,240,0.45)';
+  ctx.textAlign = 'left';
+  ctx.fillText(`${g.diff.name.toUpperCase()} MODE`, 107, 120);
+
   // Score + next unlock
   ctx.textAlign = 'right';
   ctx.font = `700 13px ${FONT_TITLE}`;
@@ -105,7 +110,7 @@ export function drawHUD(ctx, g) {
   if (next) {
     ctx.font = `italic 600 17px ${FONT_BODY}`;
     ctx.fillStyle = 'rgba(220,225,240,0.6)';
-    ctx.fillText(`Next power: ${next.name} at ${next.at}`, W - 32, 96);
+    ctx.fillText(`Next power: ${next.name} at ${powerCost(next, g.diff)}`, W - 32, 96);
   }
   if (g.combo >= 3) {
     ctx.font = `700 20px ${FONT_TITLE}`;
@@ -142,7 +147,7 @@ export function drawHUD(ctx, g) {
     ctx.font = `700 15px ${FONT_TITLE}`;
     ctx.fillStyle = 'rgba(230,232,245,0.75)';
     ctx.fillText(g.level.name.toUpperCase(), W / 2, 36);
-    const left = Math.max(0, g.level.quota - g.kills);
+    const left = Math.max(0, g.quota - g.kills);
     ctx.font = `italic 600 18px ${FONT_BODY}`;
     ctx.fillStyle = 'rgba(220,225,240,0.6)';
     ctx.fillText(left > 0 ? `${left} creature${left === 1 ? '' : 's'} remain` : g.door ? 'Find the dream-door ▸' : 'Defeat the last of them', W / 2, 60);
@@ -276,6 +281,28 @@ export function drawPanelBg(ctx, alpha = 0.7) {
   ctx.fillRect(0, 0, W, H);
 }
 
+export function drawDifficulty(ctx, sel, t) {
+  drawPanelBg(ctx, 0.72);
+  ctx.textAlign = 'center';
+  ctx.font = `700 40px ${FONT_TITLE}`;
+  ctx.fillStyle = '#f2f5fb';
+  ctx.fillText('Choose Your Dream', W / 2, 200);
+  ctx.font = `italic 600 22px ${FONT_BODY}`;
+  ctx.fillStyle = 'rgba(220,225,240,0.6)';
+  ctx.fillText('How hard should the witch\'s curse be?', W / 2, 240);
+  drawMenu(ctx, DIFFICULTIES.map((d) => d.name), sel, t, 330, 70);
+  // description of the highlighted mode
+  const d = DIFFICULTIES[sel];
+  ctx.textAlign = 'center';
+  ctx.font = `italic 600 24px ${FONT_BODY}`;
+  ctx.fillStyle = '#ffe8b0';
+  ctx.fillText(d.desc, W / 2, 570);
+  ctx.font = `italic 600 18px ${FONT_BODY}`;
+  ctx.fillStyle = 'rgba(220,225,240,0.5)';
+  ctx.fillText('Enter to begin  ·  Esc to go back', W / 2, 620);
+  ctx.textAlign = 'left';
+}
+
 export function drawControls(ctx) {
   drawPanelBg(ctx, 0.78);
   ctx.textAlign = 'center';
@@ -333,7 +360,8 @@ export function drawScores(ctx, scores, highlight = -1) {
     ctx.fillText(String(s.score), W / 2 + 230, y);
     ctx.font = `italic 600 17px ${FONT_BODY}`;
     ctx.fillStyle = 'rgba(220,225,240,0.5)';
-    ctx.fillText(s.won ? 'woke up' : `lost in level ${s.level}`, W / 2 + 230, y + 20);
+    const mode = s.diff ? DIFFICULTIES.find((d) => d.id === s.diff)?.name : null;
+    ctx.fillText((s.won ? 'woke up' : `lost in level ${s.level}`) + (mode ? `  ·  ${mode}` : ''), W / 2 + 230, y + 20);
   });
   ctx.textAlign = 'center';
   ctx.font = `italic 600 20px ${FONT_BODY}`;

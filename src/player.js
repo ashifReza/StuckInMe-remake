@@ -252,7 +252,7 @@ export class Player {
   hurt(dmg, fromX, g) {
     if (this.dead || this.inv > 0 || this.dashT > 0) return false;
     this.hp -= dmg;
-    this.inv = 1.2;
+    this.inv = g.diff.inv;
     this.hurtT = 0.4;
     this.focusT = 0;
     this.atk = null;

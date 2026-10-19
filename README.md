@@ -47,7 +47,24 @@ Then open http://localhost:8765.
 
 Clear a level's creature quota and a dream-door opens to the next one.
 
-### Powers (unlocked by Dream Essence score)
+### Difficulty
+
+Pick a mode when you start a new dream (your last choice is remembered):
+
+| | Easy | Medium | Hard |
+| --- | --- | --- | --- |
+| Starting masks | 8 | 6 | 5 |
+| Enemy speed and aggression | 72% | 86% | 100% |
+| Enemy health | 70% | 85% | 100% |
+| Creatures per level / at once | fewer | a few less | full |
+| Invulnerability after a hit | 1.8s | 1.5s | 1.2s |
+| Healing orb drop chance | 30% | 18% | 12% |
+| Witch health | 80 | 105 | 130 |
+| Power unlock scores | 70% | 85% | 100% |
+
+Hard is the original tuning. All values live in `DIFFICULTIES` in `src/levels.js`.
+
+### Powers (unlocked by Dream Essence score; scores shown are for Hard)
 
 | Score | Power |
 | --- | --- |
@@ -67,7 +84,7 @@ Landing hits fills the soul vessel (top left), which pays for the Dream Beam and
 | `src/player.js` | The boy: movement, attacks, dash, focus |
 | `src/enemies.js` | Shadeling, Moth, Thornback, Wisp, and enemy projectiles |
 | `src/boss.js` | Morwen the witch and her hazards |
-| `src/levels.js` | Level list and power thresholds (tweak difficulty here) |
+| `src/levels.js` | Level list, power thresholds and difficulty modes |
 | `src/story.js` | Storyboard panels for the intro and the ending |
 | `src/background.js` | Procedural parallax scenery per level |
 | `src/art.js` | Character drawings shared by gameplay and the story |

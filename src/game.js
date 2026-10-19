@@ -1,5 +1,5 @@
 import { W, H, GROUND, aabb, clamp, lerp, rand, seeded, weightedPick, glow, FONT_TITLE } from './util.js';
-import { LEVELS, POWERS, LEVEL_CLEAR_BONUS } from './levels.js';
+import { LEVELS, POWERS, LEVEL_CLEAR_BONUS, difficulty, powerCost } from './levels.js';
 import { Background } from './background.js';
 import { Particles } from './particles.js';
 import { Player, SOUL_MAX } from './player.js';
@@ -36,6 +36,8 @@ export class Game {
     this.li = li;
     this.level = LEVELS[li];
     this.carry = { ...carry, powers: [...carry.powers] };
+    this.diff = difficulty(carry.diff);
+    this.quota = Math.max(4, Math.round((this.level.quota || 0) * this.diff.quota));
     this.bg = new Background(this.level, 1000 + li * 17);
     this.platforms = makePlatforms(this.level, li);
     this.particles = new Particles();
@@ -74,6 +76,7 @@ export class Game {
     this.boss = null;
     if (this.level.boss) {
       this.boss = new Witch();
+      this.boss.hp = this.boss.maxHp = this.diff.bossHp;
       this.enemies.push(this.boss);
     }
   }
@@ -98,6 +101,7 @@ export class Game {
     this.hostiles.push(h);
   }
   spawnEnemy(e) {
+    if (e !== this.boss) e.hp = e.maxHp = Math.max(1, Math.round(e.hp * this.diff.enemyHp));
     this.enemies.push(e);
   }
   clearHostiles() {
@@ -129,7 +133,7 @@ export class Game {
     const pts = Math.round(e.points * mult);
     this.addScore(pts, e.cx, e.y - 10);
     this.player.soul = Math.min(SOUL_MAX, this.player.soul + 6);
-    if (this.player.hp < this.player.maxHp && Math.random() < 0.12) {
+    if (this.player.hp < this.player.maxHp && Math.random() < this.diff.heartDrop) {
       this.pickups.push({ x: e.cx, y: e.cy, vy: -300, t: 0 });
     }
   }
@@ -173,10 +177,12 @@ export class Game {
     p.update(dt, this);
 
     this.updateSpawning(dt);
-    for (const e of this.enemies) e.update(dt, this);
+    // difficulty slows enemies, the boss and their projectiles as a whole
+    const edt = dt * this.diff.enemySpeed;
+    for (const e of this.enemies) e.update(edt, this);
     this.resolveCombat(dt);
     this.enemies = this.enemies.filter((e) => !e.dead);
-    for (const h of this.hostiles) h.update(dt, this);
+    for (const h of this.hostiles) h.update(edt, this);
     this.hostiles = this.hostiles.filter((h) => !h.dead);
     this.updatePickups(dt);
     this.updateDoor(dt);
@@ -204,16 +210,16 @@ export class Game {
 
   updateSpawning(dt) {
     if (this.level.boss || this.introT > 2) return;
-    const maxAlive = 3 + this.li;
+    const maxAlive = Math.max(1, 3 + this.li + this.diff.crowd);
     this.spawnT -= dt;
-    if (this.spawned < this.level.quota && this.enemies.length < maxAlive && this.spawnT <= 0) {
+    if (this.spawned < this.quota && this.enemies.length < maxAlive && this.spawnT <= 0) {
       const type = weightedPick(this.level.enemies);
       const p = this.player;
       // spawn away from the player, preferably ahead of them
       let x = p.cx + (Math.random() < 0.7 ? p.dir : -p.dir) * rand(380, 620);
       if (x < 60 || x > this.level.width - 100) x = p.cx - (x - p.cx);
       x = clamp(x, 60, this.level.width - 120);
-      this.enemies.push(new ENEMY_TYPES[type](x));
+      this.spawnEnemy(new ENEMY_TYPES[type](x));
       this.spawned++;
       this.spawnT = Math.max(0.6, 1.5 - this.li * 0.2) + rand(0, 0.8);
     }
@@ -333,7 +339,7 @@ export class Game {
 
   updateDoor(dt) {
     const p = this.player;
-    if (!this.level.boss && !this.door && this.kills >= this.level.quota && this.enemies.length === 0) {
+    if (!this.level.boss && !this.door && this.kills >= this.quota && this.enemies.length === 0) {
       const x = clamp(p.cx + p.dir * 260, 80, this.level.width - 140);
       this.door = { x: x - 40, y: GROUND - 150, w: 80, h: 150, t: 0, used: false };
       Audio.play('door');
@@ -357,7 +363,7 @@ export class Game {
 
   checkPowers() {
     for (const pw of POWERS) {
-      if (this.score >= pw.at && !this.powers.has(pw.id)) {
+      if (this.score >= powerCost(pw, this.diff) && !this.powers.has(pw.id)) {
         this.powers.add(pw.id);
         if (pw.id === 'heart') {
           this.player.maxHp++;
@@ -373,7 +379,7 @@ export class Game {
 
   // carry-over state for the next level
   snapshot() {
-    return { score: this.score, powers: [...this.powers], maxHp: this.player.maxHp, soul: this.player.soul };
+    return { score: this.score, powers: [...this.powers], maxHp: this.player.maxHp, soul: this.player.soul, diff: this.diff.id };
   }
 
   // ---------- drawing ----------

@@ -2,15 +2,16 @@ import { W, H, store, FONT_TITLE, FONT_BODY } from './util.js';
 import { Input, bindMouse } from './input.js';
 import { Audio } from './audio.js';
 import { Background } from './background.js';
-import { LEVELS } from './levels.js';
+import { LEVELS, DIFFICULTIES, difficulty } from './levels.js';
 import { Game } from './game.js';
 import { Storyboard, INTRO, ENDING } from './story.js';
-import { drawBootScreen, drawTitle, drawMenu, menuItemRects, drawControls, drawScores, drawNameEntry, drawPanelBg } from './ui.js';
+import { drawBootScreen, drawTitle, drawMenu, menuItemRects, drawControls, drawScores, drawNameEntry, drawPanelBg, drawDifficulty } from './ui.js';
 import { drawBoy } from './art.js';
 
 const SCORE_KEY = 'stuckinme.scores';
 const MAX_RENDER_W = 1920;
-const NEW_RUN = { score: 0, powers: [], maxHp: 5, soul: 0 };
+const DIFF_KEY = 'stuckinme.difficulty';
+const newRun = (diffId) => ({ score: 0, powers: [], maxHp: difficulty(diffId).masks, soul: 0, diff: diffId });
 
 class App {
   constructor(canvas) {
@@ -75,7 +76,7 @@ class App {
 
   victory(g) {
     if (this.state !== 'play') return;
-    this.final = { score: g.score, won: true, level: LEVELS.length };
+    this.final = { score: g.score, won: true, level: LEVELS.length, diff: g.diff.id };
     this.state = 'ending';
     Audio.music('ending');
     this.story = new Storyboard(ENDING, 'Epilogue  ·  Morning', () => this.toNameEntry(), 'The End  ▸');
@@ -87,7 +88,7 @@ class App {
   }
 
   saveScore() {
-    const entry = { name: this.name.trim() || 'Dreamer', score: this.final.score, won: this.final.won, level: this.final.level };
+    const entry = { name: this.name.trim() || 'Dreamer', score: this.final.score, won: this.final.won, level: this.final.level, diff: this.final.diff };
     this.scores.push(entry);
     this.scores.sort((a, b) => b.score - a.score);
     this.scores = this.scores.slice(0, 7);
@@ -144,7 +145,12 @@ class App {
 
       case 'menu':
         this.runMenu(['Begin the Dream', 'Replay the Story', 'Controls', 'Hall of Dreamers'], (i) => {
-          if (i === 0) this.startLevel(0, NEW_RUN);
+          if (i === 0) {
+            // preselect the last difficulty played (Medium the first time)
+            const last = DIFFICULTIES.findIndex((d) => d.id === store.get(DIFF_KEY, 'medium'));
+            this.sel = last < 0 ? 1 : last;
+            this.state = 'difficulty';
+          }
           if (i === 1) this.startStory();
           if (i === 2) this.state = 'controls';
           if (i === 3) {
@@ -152,6 +158,18 @@ class App {
             this.state = 'scores';
           }
         });
+        break;
+
+      case 'difficulty':
+        if (Input.hit('pause')) {
+          Audio.play('select');
+          this.toMenu();
+          break;
+        }
+        this.runMenu(DIFFICULTIES.map((d) => d.name), (i) => {
+          store.set(DIFF_KEY, DIFFICULTIES[i].id);
+          this.startLevel(0, newRun(DIFFICULTIES[i].id));
+        }, 330, 70);
         break;
 
       case 'controls':
@@ -187,7 +205,7 @@ class App {
         this.runMenu(['Try Again', 'Give Up'], (i) => {
           if (i === 0) this.startLevel(this.over.li, this.over.carry);
           else {
-            this.final = { score: this.over.score, won: false, level: this.over.li + 1 };
+            this.final = { score: this.over.score, won: false, level: this.over.li + 1, diff: this.over.carry.diff };
             if (this.final.score > 0) this.toNameEntry();
             else this.toMenu();
           }
@@ -220,6 +238,7 @@ class App {
         this.story.draw(ctx);
         break;
       case 'menu':
+      case 'difficulty':
       case 'controls':
       case 'scores':
       case 'name':
@@ -233,6 +252,7 @@ class App {
           ctx.fillText('↑ ↓ to choose · Enter to select · M to mute', W / 2, 690);
           ctx.textAlign = 'left';
         }
+        if (this.state === 'difficulty') drawDifficulty(ctx, this.sel, this.t);
         if (this.state === 'controls') drawControls(ctx);
         if (this.state === 'scores') drawScores(ctx, this.scores, this.highlight);
         if (this.state === 'name') drawNameEntry(ctx, this.name, this.final.score, this.final.won, this.t);
