@@ -1,8 +1,23 @@
 # Stuck In Me (Remake)
 
+![Stuck In Me title screen](docs/screenshots/01-title.jpg)
+
 A boy falls asleep in his family's new house in the woods, and the witch who haunts it curses him: fight the creatures of his dreams alone. Win, and he wakes up. Lose, and he stays there forever.
 
 A browser remake of my original iGraphics/C++ game, with a Hollow Knight-inspired look. Everything is drawn and synthesized in code (HTML5 Canvas + WebAudio): no image or sound files, no build step, no dependencies.
+
+**[▶ Play it in your browser](https://ashifreza.github.io/StuckInMe-remake/)**
+
+## Screenshots
+
+| | |
+| --- | --- |
+| ![Storyboard intro](docs/screenshots/02-storyboard.jpg) | ![Level 1, The Whispering Woods](docs/screenshots/03-whispering-woods.jpg) |
+| **The storyboard intro**: the witch curses the sleeping boy. | **The Whispering Woods**: an Ember Fists punch mid-combo against the shadelings. |
+| ![Level 3, The Thorn Garden](docs/screenshots/04-thorn-garden-beam.jpg) | ![The Obsidian Knight](docs/screenshots/05-obsidian-knight.jpg) |
+| **The Thorn Garden**: the Dream Beam fired straight up through a wisp. | **The Obsidian Knight**: leaping over the lava waves from its slam. |
+| ![The witch reveal](docs/screenshots/06-witch-reveal.jpg) | |
+| **The twist**: the knight falls, and the witch rises out of its armor. | |
 
 ## Play
 
