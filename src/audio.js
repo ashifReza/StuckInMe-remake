@@ -73,6 +73,9 @@ const SFX = {
   bossHit: () => { tone('square', 300, 80, 0.1, 0.12); noise(0.1, 0.35, 1500, 'bandpass'); },
   thorn: () => { noise(0.25, 0.4, 900, 'bandpass'); tone('square', 120, 60, 0.2, 0.08); },
   gameover: () => [392, 349, 311, 262].forEach((f, i) => tone('triangle', f, f, 0.9, 0.12, i * 0.35)),
+  heartbeat: () => { tone('sine', 70, 40, 0.18, 0.45); tone('sine', 66, 38, 0.22, 0.35, 0.24); },
+  whisper: () => { noise(0.7, 0.18, 2200, 'bandpass', 0, 3); tone('sawtooth', 110, 90, 0.6, 0.04); },
+  shatter: () => { noise(0.6, 0.6, 3500, 'highpass'); noise(0.9, 0.5, 400, 'lowpass'); [1800, 2400, 3100].forEach((f, i) => tone('square', f, f * 0.7, 0.3, 0.05, i * 0.05)); },
   victory: () => [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => tone('sine', f, f, 0.7, 0.14, i * 0.16)),
 };
 

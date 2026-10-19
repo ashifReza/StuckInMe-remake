@@ -139,12 +139,12 @@ function bed(ctx, x, y, mood, sitting, t) {
   roundRect(ctx, x + 10, y - 40, 90, 40, 16);
   ctx.fill();
   if (sitting) {
-    drawBoy(ctx, { x: x + 80, y: y + 10, scale: 2.1, t, pose: 'idle', dir: 1 });
+    drawBoy(ctx, { x: x + 80, y: y + 10, scale: 2.1, t, pose: 'idle', dir: 1, suit: false });
   } else {
     ctx.save();
     ctx.translate(x + 55, y - 26);
     ctx.rotate(-1.35);
-    drawBoy(ctx, { x: 0, y: 0, scale: 1.8, t, pose: 'sleep', dir: 1 });
+    drawBoy(ctx, { x: 0, y: 0, scale: 1.8, t, pose: 'sleep', dir: 1, suit: false });
     ctx.restore();
   }
   // blanket
@@ -408,7 +408,7 @@ export const ENDING = [
       ctx.moveTo(PW / 2, 0);
       ctx.lineTo(PW / 2, PH);
       ctx.stroke();
-      drawBoy(ctx, { x: 300, y: 520, scale: 3.2, t, pose: 'idle', dir: 1 });
+      drawBoy(ctx, { x: 300, y: 520, scale: 3.2, t, pose: 'idle', dir: 1, suit: false });
     },
     bubbles: [
       { kind: 'thought', who: 'Boy', text: 'It was all just a dream... right?', x: 380, y: 90, w: 300, tail: [330, 300] },

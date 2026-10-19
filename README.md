@@ -39,13 +39,13 @@ Then open http://localhost:8765.
 
 ## The game
 
-- **Storyboard intro**: six illustrated panels with speech bubbles, clicked through one at a time.
+- **Storyboard intro**: six illustrated panels with speech bubbles, clicked through one at a time. In bed the boy wears pajamas; in the dream he wakes up in a futuristic dream-suit (helmet, glowing core, energy scarf).
 - **Level 1, The Whispering Woods**: Shadelings crawl closer, crouch, then pounce.
 - **Level 2, Moth Hollow**: Dusk Moths hover out of reach, then dive at you.
 - **Level 3, The Thorn Garden**: armored Thornbacks curl up and roll; Wisps hover at jump height and spit orbs (which you can punch away), then sink within reach for a moment after each shot.
-- **Level 4, The Witch's Heart**: Morwen, the Wicked Witch, has her own health bar and three phases: homing hex orbs, a floor-raking swoop that leaves her stunned, thorns from the ground, summoned minions, and slam shockwaves.
+- **Level 4, The Witch's Heart**: the Obsidian Knight, a modern, animated take on the original game's boss: horned helm, kite shield, molten-cracked armor and a jagged lava sword. It has its own health bar and three phases: a telegraphed sword thrust, an overhead slam that sends lava waves along the floor, a crushing leap, a shield guard (punches bounce off; the Moon Kick and Dream Beam break through), and once enraged, fire eruptions and homing violet orbs. When it falls, its armor bursts open and the truth comes out: it was the witch all along.
 
-Clear a level's creature quota and a dream-door opens to the next one.
+Clear a level's creature quota and a dream-door opens to the next one. Stepping through it plays a short cinematic of the boy's thoughts before the next realm begins.
 
 ### Difficulty
 

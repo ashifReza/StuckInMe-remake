@@ -1,8 +1,7 @@
-import { W, H, roundRect, glow, FONT_TITLE, FONT_BODY, clamp } from './util.js';
+import { W, H, roundRect, glow, wrapText, FONT_TITLE, FONT_BODY, clamp } from './util.js';
 import { POWERS, LEVELS, DIFFICULTIES, powerCost } from './levels.js';
 import { SOUL_COST, SOUL_MAX } from './player.js';
-import { BOSS_NAME } from './boss.js';
-import { drawBoy } from './art.js';
+import { drawBoy, drawWitch } from './art.js';
 
 function mask(ctx, x, y, full, pulse = 0) {
   ctx.save();
@@ -122,18 +121,20 @@ export function drawHUD(ctx, g) {
   ctx.textAlign = 'center';
   if (g.boss) {
     const b = g.boss;
+    if (b.dead) return;
     const bw = 620;
     const bx = W / 2 - bw / 2;
     const by = H - 46;
     ctx.font = `700 18px ${FONT_TITLE}`;
     ctx.fillStyle = '#f0e2ff';
-    ctx.fillText(BOSS_NAME.toUpperCase(), W / 2, by - 14);
+    ctx.fillText(b.name.toUpperCase(), W / 2, by - 14);
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
     ctx.fillRect(bx - 4, by - 4, bw + 8, 20);
     const k = clamp(b.shown / b.maxHp, 0, 1);
     const bg = ctx.createLinearGradient(bx, 0, bx + bw, 0);
-    bg.addColorStop(0, '#7b2fd0');
-    bg.addColorStop(1, '#ff6fd8');
+    const [c0, c1] = b.bar || ['#7b2fd0', '#ff6fd8'];
+    bg.addColorStop(0, c0);
+    bg.addColorStop(1, c1);
     ctx.fillStyle = bg;
     ctx.fillRect(bx, by, bw * k, 12);
     ctx.strokeStyle = '#d9c4f0';
@@ -408,5 +409,74 @@ export function drawBootScreen(ctx, t) {
   ctx.font = `600 15px ${FONT_BODY}`;
   ctx.fillStyle = 'rgba(220,225,240,0.4)';
   ctx.fillText('A remake of the original iGraphics game. Best with sound on.', W / 2, 680);
+  ctx.textAlign = 'left';
+}
+
+// Cinematic dialog box: portrait, name, typewriter text. Thoughts are italic.
+export function drawDialog(ctx, g) {
+  const d = g.dialog;
+  const line = d.lines[d.i];
+  const witch = line.who === 'Witch';
+  const a = clamp(g.cine * 1.4 - 0.3, 0, 1);
+  if (a <= 0) return;
+  const bx = 150;
+  const by = 96; // top of the screen, so the characters below stay visible
+  const bw = W - 300;
+  const bh = 132;
+  ctx.save();
+  ctx.globalAlpha = a;
+  const jitter = witch && d.t < 0.4 ? (Math.random() - 0.5) * 4 : 0;
+  ctx.translate(jitter, 0);
+
+  ctx.fillStyle = 'rgba(5,7,14,0.9)';
+  roundRect(ctx, bx, by, bw, bh, 14);
+  ctx.fill();
+  ctx.strokeStyle = witch ? 'rgba(212,139,255,0.7)' : line.thought ? 'rgba(127,243,255,0.45)' : 'rgba(220,230,250,0.45)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  if (witch) glow(ctx, bx + bw / 2, by + bh / 2, bw * 0.45, 'rgba(150,60,230,0.35)', 0.6, bh);
+
+  // portrait
+  const px = bx + 74;
+  const py = by + bh / 2;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(px, py, 50, 0, Math.PI * 2);
+  ctx.fillStyle = witch ? '#1a0b26' : '#0c1426';
+  ctx.fill();
+  ctx.clip();
+  if (witch) drawWitch(ctx, { x: px - 6, y: py + 100, scale: 1.55, t: g.t, dir: 1, aura: false });
+  else drawBoy(ctx, { x: px - 4, y: py + 140, scale: 2.6, t: g.t, pose: 'idle', dir: 1 });
+  ctx.restore();
+  ctx.strokeStyle = witch ? '#d48bff' : '#7ff3ff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(px, py, 50, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // name and text
+  const tx = bx + 150;
+  ctx.textAlign = 'left';
+  ctx.font = `700 15px ${FONT_TITLE}`;
+  ctx.fillStyle = witch ? '#d48bff' : '#7ff3ff';
+  ctx.fillText(witch ? 'MORWEN' : line.thought ? 'THE BOY  ·  THINKING' : 'THE BOY', tx, by + 34);
+  ctx.font = line.thought ? `italic 600 27px ${FONT_BODY}` : `600 27px ${FONT_BODY}`;
+  ctx.fillStyle = witch ? '#f3e3ff' : '#eef3fb';
+  const lines = wrapText(ctx, line.text, bw - 190);
+  let left = Math.floor(d.chars);
+  lines.forEach((ln, i) => {
+    if (left <= 0) return;
+    ctx.fillText(ln.slice(0, left), tx, by + 70 + i * 32);
+    left -= ln.length + 1;
+  });
+  // continue prompt
+  if (d.chars >= line.text.length) {
+    ctx.globalAlpha = a * (0.5 + Math.sin(g.t * 5) * 0.4);
+    ctx.font = `700 14px ${FONT_TITLE}`;
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(d.i < d.lines.length - 1 ? 'ENTER  ▸' : 'ENTER  ✦', bx + bw - 22, by + bh - 16);
+  }
+  ctx.restore();
   ctx.textAlign = 'left';
 }

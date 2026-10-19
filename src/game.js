@@ -1,12 +1,13 @@
 import { W, H, GROUND, aabb, clamp, lerp, rand, seeded, weightedPick, glow, FONT_TITLE } from './util.js';
-import { LEVELS, POWERS, LEVEL_CLEAR_BONUS, difficulty, powerCost } from './levels.js';
+import { LEVELS, POWERS, LEVEL_CLEAR_BONUS, REVEAL_LINES, difficulty, powerCost } from './levels.js';
 import { Background } from './background.js';
 import { Particles } from './particles.js';
 import { Player, SOUL_MAX } from './player.js';
 import { ENEMY_TYPES } from './enemies.js';
-import { Witch } from './boss.js';
+import { Knight, WitchReveal } from './boss.js';
+import { Input } from './input.js';
 import { Audio } from './audio.js';
-import { drawHUD, drawLevelCard, drawBanner, drawToasts } from './ui.js';
+import { drawHUD, drawLevelCard, drawBanner, drawToasts, drawDialog } from './ui.js';
 
 const shrink = (b, m) => ({ x: b.x + m, y: b.y + m, w: b.w - m * 2, h: b.h - m * 2 });
 
@@ -74,11 +75,60 @@ export class Game {
     this.deadT = -1;
     this.wonT = -1;
     this.boss = null;
+    this.reveal = null;
+    this.dialog = null;
+    this.cine = 0; // 0..1 letterbox amount for cinematic moments
     if (this.level.boss) {
-      this.boss = new Witch();
+      this.boss = new Knight();
       this.boss.hp = this.boss.maxHp = this.diff.bossHp;
       this.enemies.push(this.boss);
     }
+    // stepping through a dream-door: the boy's thoughts, before the level begins
+    if (this.level.thoughts) this.say(this.level.thoughts.map((text) => ({ who: 'Boy', text, thought: true })));
+  }
+
+  // ---------- cinematic dialog ----------
+  say(lines, onDone) {
+    this.dialog = { lines, i: 0, chars: 0, t: 0, onDone };
+    this.onLine(lines[0]);
+  }
+
+  onLine(line) {
+    if (line.thought) Audio.play('heartbeat');
+    else if (line.who === 'Witch') {
+      Audio.play('whisper');
+      this.shake(line.text.includes('!') || /[A-Z]{3,}/.test(line.text) ? 10 : 4);
+      if (line.laugh) this.reveal?.laugh();
+    } else Audio.play('page');
+  }
+
+  updateDialog(dt) {
+    const d = this.dialog;
+    d.t += dt;
+    d.chars += dt * 40;
+    if (Input.hit('confirm') || Input.hit('punch') || Input.hit('kick') || Input.mouse.clicked) {
+      if (d.chars < d.lines[d.i].text.length) d.chars = d.lines[d.i].text.length;
+      else if (++d.i >= d.lines.length) {
+        this.dialog = null;
+        d.onDone?.();
+      } else {
+        d.chars = 0;
+        d.t = 0;
+        this.onLine(d.lines[d.i]);
+      }
+    }
+  }
+
+  // the knight has fallen: its armor bursts and the witch rises out of it
+  startReveal(k) {
+    k.dead = true;
+    this.flash('#c27bff', 0.9);
+    this.shake(26);
+    Audio.play('shatter');
+    this.particles.burst(k.cx, k.y + 90, 40, { speed: 520, color: '#1d161b', life: 1, size: 7, g: 1100, drag: 0.5 });
+    this.particles.burst(k.cx, k.y + 90, 30, { speed: 380, color: '#c27bff', glow: true, life: 0.9, size: 3 });
+    this.particles.ring(k.cx, k.y + 90, '#d48bff', 260, 0.7, 6);
+    this.reveal = new WitchReveal(k.cx);
   }
 
   // ---------- hooks used by entities ----------
@@ -139,7 +189,8 @@ export class Game {
   }
 
   onBossDefeated() {
-    this.addScore(1000 + this.player.hp * 100, this.boss.cx, this.boss.y);
+    const r = this.reveal || this.boss;
+    this.addScore(1000 + this.player.hp * 100, r.x ?? W / 2, (r.y ?? 300) - 60);
     this.wonT = 0;
     Audio.play('victory');
   }
@@ -160,13 +211,22 @@ export class Game {
     this.particles.update(dt);
     this.shownScore = lerp(this.shownScore, this.score, Math.min(1, dt * 8));
     this.flashT = Math.max(0, this.flashT - dt);
-    this.introT = Math.max(0, this.introT - dt);
     for (const m of this.toasts) m.life -= dt;
     this.toasts = this.toasts.filter((m) => m.life > 0);
     if (this.banner) {
       this.banner.t += dt;
       if (this.banner.t > this.banner.life) this.banner = null;
     } else if (this.bannerQueue.length) this.banner = this.bannerQueue.shift();
+
+    // cinematic dialog freezes the action until the player reads through it
+    this.cine = lerp(this.cine, this.dialog ? 1 : 0, Math.min(1, dt * 4));
+    if (this.dialog) {
+      this.updateDialog(dt);
+      this.reveal?.update(dt, this);
+      this.shakeAmt = Math.max(0, this.shakeAmt - dt * 40);
+      return;
+    }
+    this.introT = Math.max(0, this.introT - dt);
 
     if (this.stopT > 0) {
       this.stopT -= dt;
@@ -182,6 +242,13 @@ export class Game {
     for (const e of this.enemies) e.update(edt, this);
     this.resolveCombat(dt);
     this.enemies = this.enemies.filter((e) => !e.dead);
+    if (this.reveal) {
+      this.reveal.update(dt, this);
+      if (this.reveal.state === 'emerge' && this.reveal.t > 1.8 && !this.revealSpoken) {
+        this.revealSpoken = true;
+        this.say(REVEAL_LINES, () => this.reveal.fade());
+      }
+    }
     for (const h of this.hostiles) h.update(edt, this);
     this.hostiles = this.hostiles.filter((h) => !h.dead);
     this.updatePickups(dt);
@@ -310,6 +377,8 @@ export class Game {
       for (const e of this.enemies) {
         if (e.spawning || e.dead || !e.contact) continue;
         if (aabb(pb, shrink(e.hurtbox(), 6))) p.hurt(1, e.cx, this);
+        const ab = e.attackBox?.();
+        if (ab && aabb(pb, ab)) p.hurt(1, e.cx, this);
       }
       for (const h of this.hostiles) {
         const b = h.box;
@@ -395,6 +464,7 @@ export class Game {
     this.drawDoor(ctx);
     for (const k of this.pickups) this.drawPickup(ctx, k);
     for (const e of this.enemies) e.draw(ctx, this);
+    this.reveal?.draw(ctx);
     for (const h of this.hostiles) h.draw(ctx);
     this.player.draw(ctx, this);
     this.drawShots(ctx);
@@ -418,7 +488,16 @@ export class Game {
       ctx.fillRect(0, 0, W, H);
     }
 
+    ctx.globalAlpha = 1 - this.cine;
     drawHUD(ctx, this);
+    ctx.globalAlpha = 1;
+    // letterbox bars + dialog for cinematic moments
+    if (this.cine > 0.01) {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, W, 78 * this.cine);
+      ctx.fillRect(0, H - 78 * this.cine, W, 78 * this.cine);
+    }
+    if (this.dialog) drawDialog(ctx, this);
     drawLevelCard(ctx, this);
     drawBanner(ctx, this);
     drawToasts(ctx, this);

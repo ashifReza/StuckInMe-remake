@@ -137,7 +137,7 @@ export class Player {
       this.dashT -= dt;
       this.vx = this.dir * DASH_V;
       this.vy = 0;
-      g.particles.spawn({ x: this.cx - this.dir * 10, y: this.cy + rand(-20, 20), vx: -this.dir * 200, vy: 0, life: 0.25, size: 3, color: '#bfe2ff', kind: 'streak', glow: true });
+      g.particles.spawn({ x: this.cx - this.dir * 10, y: this.cy + rand(-20, 20), vx: -this.dir * 200, vy: 0, life: 0.25, size: 3, color: '#8ff5ff', kind: 'streak', glow: true });
     } else if (this.hurtT > 0.25) {
       // knocked back: no control briefly
     } else {
@@ -287,7 +287,7 @@ export class Player {
   draw(ctx, g) {
     const pose = this.pose();
     const ember = g.powers.has('ember');
-    glow(ctx, this.cx, this.y + 14, 140, 'rgba(150,200,255,0.16)');
+    glow(ctx, this.cx, this.y + 14, 140, 'rgba(110,230,255,0.15)');
     if (this.focusT > 0) glow(ctx, this.cx, this.cy, 70 + this.focusT * 40, 'rgba(210,235,255,0.5)');
     const flicker = this.inv > 0 && !this.dead && Math.floor(this.inv * 18) % 2 === 0;
     const p = this.atk ? this.atk.t / this.atk.def.dur : 0;

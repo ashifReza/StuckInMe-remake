@@ -11,6 +11,12 @@ export const LEVELS = [
   {
     name: 'Moth Hollow',
     sub: 'Something flutters in the dark',
+    // what the boy thinks as he steps through the dream-door into this level
+    thoughts: [
+      'That door led deeper... not out. Of course it did.',
+      'The shadows back there bled light when they broke. Like they were never really alive.',
+      "Mom. Dad. If you can hear me... hold on. I'm coming home.",
+    ],
     enemies: { moth: 2.5, shadeling: 1 },
     quota: 12,
     width: 3000,
@@ -19,6 +25,11 @@ export const LEVELS = [
   {
     name: 'The Thorn Garden',
     sub: 'Every rose remembers a wound',
+    thoughts: [
+      'The moths were whispering my name. All of them. In HER voice.',
+      "My hands won't stop shaking.",
+      "...No. She wants me scared. I won't give her that.",
+    ],
     enemies: { thornback: 2, wisp: 2, shadeling: 0.6, moth: 0.6 },
     quota: 14,
     width: 3200,
@@ -27,6 +38,12 @@ export const LEVELS = [
   {
     name: "The Witch's Heart",
     sub: 'Win, and wake. Lose, and stay forever.',
+    thoughts: [
+      'The air is burning. Something enormous is breathing in the dark.',
+      'A knight...? Maybe someone else got trapped here too. Maybe it can help me.',
+      "...No. Its armor is on fire, and it's standing between me and the way out.",
+      "If I fall here, I never wake up. So I won't fall.",
+    ],
     boss: true,
     width: 1280,
     theme: { sky: ['#05020b', '#2c0a3a'], far: '#1f0731', mid: '#140420', ground: '#080210', accent: '#ff6fd8', mote: '#ffc0f0', shape: 'vortex' },
@@ -104,3 +121,13 @@ export const difficulty = (id) => DIFFICULTIES.find((d) => d.id === id) || DIFFI
 
 // Score needed for a power in a given difficulty (rounded to a tidy number)
 export const powerCost = (pw, diff) => Math.round((pw.at * diff.powerAt) / 10) * 10;
+
+// The twist after the Obsidian Knight falls
+export const REVEAL_LINES = [
+  { who: 'Boy', text: "It's... over? I did it! Now let me WAKE UP!" },
+  { who: 'Witch', text: 'Ah, ah, ah. Not so fast, little dreamer.', laugh: true },
+  { who: 'Witch', text: 'A knight? Oh, sweet child... there was never any knight. It was ME. It was always me.' },
+  { who: 'Boy', text: 'You were inside that armor... the whole time?' },
+  { who: 'Boy', text: 'Then nothing changes. I beat your knight. I beat your monsters. I beat YOU.' },
+  { who: 'Witch', text: 'Impossible... my curse... it is CRACKING!' },
+];
