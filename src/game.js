@@ -4,10 +4,13 @@ import { Background } from './background.js';
 import { Particles } from './particles.js';
 import { Player, SOUL_MAX } from './player.js';
 import { ENEMY_TYPES } from './enemies.js';
-import { Knight, WitchReveal } from './boss.js';
+import { Knight, WitchReveal, Witch } from './boss.js';
 import { Input } from './input.js';
 import { Audio } from './audio.js';
 import { drawHUD, drawLevelCard, drawBanner, drawToasts, drawDialog } from './ui.js';
+
+const KNIGHT_SHARE = 0.6;
+const WITCH_SHARE = 0.65;
 
 const shrink = (b, m) => ({ x: b.x + m, y: b.y + m, w: b.w - m * 2, h: b.h - m * 2 });
 
@@ -79,8 +82,9 @@ export class Game {
     this.dialog = null;
     this.cine = 0; // 0..1 letterbox amount for cinematic moments
     if (this.level.boss) {
+      // the difficulty's boss health is shared between the knight and the witch
       this.boss = new Knight();
-      this.boss.hp = this.boss.maxHp = this.diff.bossHp;
+      this.boss.hp = this.boss.maxHp = Math.round(this.diff.bossHp * KNIGHT_SHARE);
       this.enemies.push(this.boss);
     }
     // stepping through a dream-door: the boy's thoughts, before the level begins
@@ -188,6 +192,17 @@ export class Game {
     }
   }
 
+  // phase two: the witch drops the act and fights with her own health bar
+  startWitchFight() {
+    const w = new Witch(this.reveal.x, this.reveal.y);
+    w.hp = w.maxHp = Math.round(this.diff.bossHp * WITCH_SHARE);
+    this.reveal = null;
+    this.boss = w;
+    this.enemies.push(w);
+    this.flash('#d48bff', 0.5);
+    Audio.music('boss', 6);
+  }
+
   onBossDefeated() {
     const r = this.reveal || this.boss;
     this.addScore(1000 + this.player.hp * 100, r.x ?? W / 2, (r.y ?? 300) - 60);
@@ -244,9 +259,9 @@ export class Game {
     this.enemies = this.enemies.filter((e) => !e.dead);
     if (this.reveal) {
       this.reveal.update(dt, this);
-      if (this.reveal.state === 'emerge' && this.reveal.t > 1.8 && !this.revealSpoken) {
+      if (this.reveal.t > 1.8 && !this.revealSpoken) {
         this.revealSpoken = true;
-        this.say(REVEAL_LINES, () => this.reveal.fade());
+        this.say(REVEAL_LINES, () => this.startWitchFight());
       }
     }
     for (const h of this.hostiles) h.update(edt, this);

@@ -43,7 +43,7 @@ Then open http://localhost:8765.
 - **Level 1, The Whispering Woods**: Shadelings crawl closer, crouch, then pounce.
 - **Level 2, Moth Hollow**: Dusk Moths hover out of reach, then dive at you.
 - **Level 3, The Thorn Garden**: armored Thornbacks curl up and roll; Wisps hover at jump height and spit orbs (which you can punch away), then sink within reach for a moment after each shot.
-- **Level 4, The Witch's Heart**: the Obsidian Knight, a modern, animated take on the original game's boss: horned helm, kite shield, molten-cracked armor and a jagged lava sword. It has its own health bar and three phases: a telegraphed sword thrust, an overhead slam that sends lava waves along the floor, a crushing leap, a shield guard (punches bounce off; the Moon Kick and Dream Beam break through), and once enraged, fire eruptions and homing violet orbs. When it falls, its armor bursts open and the truth comes out: it was the witch all along.
+- **Level 4, The Witch's Heart**: the Obsidian Knight, a modern, animated take on the original game's boss: horned helm, kite shield, molten-cracked armor and a jagged lava sword. It has its own health bar and three phases: a telegraphed sword thrust, an overhead slam that sends lava waves along the floor, a crushing leap, a shield guard (punches bounce off; the Moon Kick and Dream Beam break through), and once enraged, fire eruptions and homing violet orbs. When it falls, its armor bursts open and the truth comes out: it was the witch all along. Then **Morwen, the Wicked Witch** fights you herself with her own health bar: homing hex orbs, a floor-raking swoop that leaves her stunned, violet thorns from the ground, summoned minions, and slam shockwaves.
 
 Clear a level's creature quota and a dream-door opens to the next one. Stepping through it plays a short cinematic of the boy's thoughts before the next realm begins.
 
@@ -59,7 +59,7 @@ Pick a mode when you start a new dream (your last choice is remembered):
 | Creatures per level / at once | fewer | a few less | full |
 | Invulnerability after a hit | 1.8s | 1.5s | 1.2s |
 | Healing orb drop chance | 30% | 18% | 12% |
-| Witch health | 80 | 105 | 130 |
+| Boss health (knight + witch) | 48 + 52 | 63 + 68 | 78 + 85 |
 | Power unlock scores | 70% | 85% | 100% |
 
 Hard is the original tuning. All values live in `DIFFICULTIES` in `src/levels.js`.

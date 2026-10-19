@@ -1,9 +1,10 @@
-// The final fight: the Obsidian Knight (the original game's boss, reimagined),
-// and the twist when it falls: it was the witch all along.
+// The final fight, in two phases: the Obsidian Knight (the original game's boss,
+// reimagined), then the twist when it falls: it was the witch all along, and she
+// fights you herself.
 import { W, GROUND, GRAVITY, clamp, rand, choice, lerp, glow } from './util.js';
 import { Audio } from './audio.js';
 import { drawKnight, drawWitch } from './art.js';
-import { Enemy, Orb } from './enemies.js';
+import { Enemy, Orb, Shadeling, Moth } from './enemies.js';
 
 // ---------- hazards ----------
 // A pillar that erupts from the ground after a glowing warning.
@@ -58,7 +59,7 @@ class GroundWave {
     g.particles.spawn({ x: this.x + rand(-10, 10), y: GROUND - rand(0, 30), vx: -this.vx * 0.1, vy: rand(-140, -40), life: 0.4, size: rand(3, 6), color: this.color, glow: true });
   }
   draw(ctx) {
-    glow(ctx, this.x, GROUND - 16, 50, 'rgba(255,120,40,0.85)');
+    glow(ctx, this.x, GROUND - 16, 50, this.color === '#ff7a1a' ? 'rgba(255,120,40,0.85)' : 'rgba(200,110,255,0.85)');
     ctx.fillStyle = '#ffe2b0';
     ctx.beginPath();
     ctx.moveTo(this.x - 14, GROUND);
@@ -390,45 +391,284 @@ export class Knight extends Enemy {
 // ---------- the reveal: the witch rises out of the broken armor ----------
 export class WitchReveal {
   constructor(x) {
-    Object.assign(this, { x, y: GROUND - 70, t: 0, state: 'emerge', st: 0, done: false, laughT: 0 });
+    Object.assign(this, { x, y: GROUND - 70, t: 0, laughT: 0 });
   }
   laugh() {
     this.laughT = 0.8;
   }
-  fade() {
-    this.state = 'fade';
-    this.st = 0;
+  update(dt, g) {
+    this.t += dt;
+    this.laughT = Math.max(0, this.laughT - dt);
+    this.y = lerp(this.y, GROUND - 230, Math.min(1, dt * 1.5));
+    if (Math.random() < 0.6) g.particles.spawn({ x: this.x + rand(-50, 50), y: GROUND - rand(0, 40), vx: rand(-20, 20), vy: rand(-160, -60), life: 1, size: rand(6, 12), color: 'rgba(40,10,60,0.7)' });
   }
+  draw(ctx) {
+    const shake = this.laughT > 0 ? Math.sin(this.t * 60) * 2 : 0;
+    drawWitch(ctx, { x: this.x + shake, y: this.y + Math.sin(this.t * 1.6) * 6, dir: -1, t: this.t, pose: 'cast', alpha: Math.min(1, this.t / 1.6) });
+  }
+}
+
+// ---------- phase two: Morwen herself ----------
+export class Witch extends Enemy {
+  // starts where she rose out of the knight's armor
+  constructor(x, y) {
+    super(x - 40, y - 75, 80, 150, 130);
+    this.name = 'Morwen, the Wicked Witch';
+    this.gravity = false;
+    this.kbResist = 1;
+    this.points = 1000;
+    this.eye = '#e0a0ff';
+    this.spawnT = 0;
+    this.state = 'intro';
+    this.targetX = W / 2 - 40;
+    this.hover = 230;
+    this.lastAttack = '';
+    this.floatFor = 1.6;
+    this.phaseSeen = 1;
+    this.deathT = 0;
+    this.pose = 'float';
+    this.shown = 0; // drives the health bar fill animation
+  }
+
+  setState(s) {
+    super.setState(s);
+    this.fired = false;
+    this.warned = false;
+    this.swoopSide = undefined;
+  }
+
+  get phase() {
+    const k = this.hp / this.maxHp;
+    return k > 0.66 ? 1 : k > 0.33 ? 2 : 3;
+  }
+  get speedMul() {
+    return [1, 1.2, 1.45][this.phase - 1];
+  }
+  get contactOn() {
+    return !['intro', 'dying', 'stunned', 'scream'].includes(this.state);
+  }
+
+  takeHit(hit, g) {
+    if (['intro', 'dying', 'scream'].includes(this.state)) return null;
+    this.hp -= hit.dmg;
+    this.flash = 0.1;
+    Audio.play('bossHit');
+    if (this.hp <= 0) {
+      this.hp = 0;
+      this.setState('dying');
+      Audio.play('roar');
+      g.clearHostiles();
+      return 'hit';
+    }
+    if (this.phase !== this.phaseSeen) {
+      this.phaseSeen = this.phase;
+      this.setState('scream');
+      Audio.play('roar');
+      g.shake(18);
+      g.flash('#d48bff', 0.4);
+    }
+    return 'hit';
+  }
+
   update(dt, g) {
     this.t += dt;
     this.st += dt;
-    this.laughT = Math.max(0, this.laughT - dt);
-    if (this.state === 'emerge') {
-      this.y = lerp(this.y, GROUND - 230, Math.min(1, dt * 1.5));
-      if (Math.random() < 0.6) g.particles.spawn({ x: this.x + rand(-50, 50), y: GROUND - rand(0, 40), vx: rand(-20, 20), vy: rand(-160, -60), life: 1, size: rand(6, 12), color: 'rgba(40,10,60,0.7)' });
-    } else if (this.state === 'fade') {
-      if (Math.random() < 0.8) g.particles.burst(this.x + rand(-40, 40), this.y + rand(-90, 90), 3, { speed: 260, color: choice(['#ffffff', '#d48bff', '#ff6fd8']), glow: true, life: 0.8, size: 3 });
-      if (this.st > 2.6 && !this.done) {
-        this.done = true;
-        g.flash('#ffffff', 1.2);
-        g.particles.burst(this.x, this.y, 90, { speed: 700, color: '#ffffff', glow: true, life: 1.2, size: 4 });
-        g.onBossDefeated();
+    this.flash = Math.max(0, this.flash - dt);
+    this.shown = lerp(this.shown, this.state === 'intro' ? (this.st / 2.6) * this.maxHp : this.hp, Math.min(1, dt * 6));
+    this.contact = this.contactOn ? 1 : 0;
+    this.ai(dt, g);
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.x = clamp(this.x, 20, g.level.width - this.w - 20);
+  }
+
+  moveTo(tx, ty, k, dt) {
+    this.vx = (tx - this.x) * k;
+    this.vy = (ty - this.y) * k;
+  }
+
+  pickAttack() {
+    const pool = ['orbs', 'swoop'];
+    if (this.phase >= 2) pool.push('thorns', 'summon', 'thorns');
+    if (this.phase >= 3) pool.push('slam', 'swoop', 'slam');
+    let a = choice(pool);
+    if (a === this.lastAttack) a = choice(pool);
+    this.lastAttack = a;
+    return a;
+  }
+
+  ai(dt, g) {
+    const p = g.player;
+    this.dir = p.cx < this.cx ? -1 : 1;
+    const sm = this.speedMul;
+    this.pose = 'float';
+
+    switch (this.state) {
+      case 'intro':
+        this.moveTo(this.x, this.hover, 1.6, dt);
+        if (this.st > 0.3 && !this.roared) {
+          this.roared = true;
+          Audio.play('roar');
+          g.shake(12);
+        }
+        if (this.st > 2.6) this.enterFloat();
+        break;
+
+      case 'float':
+        this.moveTo(this.targetX, this.hover + Math.sin(this.t * 1.6) * 70, 2.2 * sm, dt);
+        if (this.st > this.floatFor / sm) this.setState(this.pickAttack());
+        break;
+
+      case 'orbs':
+        this.pose = 'cast';
+        this.vx *= 0.9;
+        this.vy *= 0.9;
+        if (this.st > 0.7 && !this.fired) {
+          this.fired = true;
+          const n = 3 + this.phase;
+          for (let i = 0; i < n; i++) {
+            const a = Math.atan2(p.cy - this.cy, p.cx - this.cx) + (i - (n - 1) / 2) * 0.32;
+            const o = new Orb(this.cx, this.cy - 30, Math.cos(a) * 250 * sm, Math.sin(a) * 250 * sm, '#d48bff', 13, 4.5);
+            o.home = 1.4;
+            g.spawnHostile(o);
+          }
+          Audio.play('shoot');
+        }
+        if (this.st > 1.5) this.enterFloat();
+        break;
+
+      case 'swoop': {
+        // rise to the far side, then rake across the floor
+        const side = this.swoopSide ?? (this.swoopSide = p.cx < W / 2 ? 1 : -1);
+        const sx = side > 0 ? g.level.width - this.w - 40 : 40;
+        if (this.st < 0.8) {
+          this.moveTo(sx, 120, 5, dt);
+        } else if (this.st < 1.25) {
+          this.vx = 0;
+          this.vy = 0;
+          this.pose = 'cast';
+          if (!this.warned) {
+            this.warned = true;
+            g.particles.ring(this.cx, this.cy - 58, '#ffffff', 60, 0.4, 4);
+          }
+        } else {
+          this.pose = 'swoop';
+          this.vx = -side * 980 * sm;
+          this.vy = (GROUND - this.h - 6 - this.y) * 6;
+          if (Math.random() < 0.8) g.particles.spawn({ x: this.cx, y: this.cy + rand(-60, 60), vx: -this.vx * 0.2, vy: rand(-40, 40), life: 0.5, size: 5, color: '#a35cff', glow: true });
+          const reached = side > 0 ? this.x <= 30 : this.x >= g.level.width - this.w - 30;
+          if (reached) {
+            this.vx = 0;
+            this.vy = 0;
+            this.y = GROUND - this.h;
+            g.shake(10);
+            this.setState('stunned');
+          }
+        }
+        break;
       }
+
+      case 'thorns':
+        this.pose = 'cast';
+        this.vx *= 0.9;
+        this.vy *= 0.9;
+        if (this.st > 0.5 && !this.fired) {
+          this.fired = true;
+          const n = 4 + this.phase;
+          g.spawnHostile(new Pillar(p.cx, '#c27bff'));
+          for (let i = 1; i < n; i++) g.spawnHostile(new Pillar(rand(60, g.level.width - 60), '#c27bff'));
+        }
+        if (this.st > 1.6) this.enterFloat();
+        break;
+
+      case 'summon':
+        this.pose = 'cast';
+        this.vx *= 0.9;
+        this.vy *= 0.9;
+        if (this.st > 0.8 && !this.fired) {
+          this.fired = true;
+          if (g.enemies.length < 3) {
+            for (const x of [160, g.level.width - 220]) g.spawnEnemy(Math.random() < 0.5 ? new Shadeling(x) : new Moth(x));
+          }
+        }
+        if (this.st > 1.3) this.enterFloat();
+        break;
+
+      case 'slam':
+        if (this.st < 0.5) {
+          this.moveTo(clamp(p.x - 25, 40, g.level.width - this.w - 40), 90, 6, dt);
+        } else {
+          this.pose = 'swoop';
+          this.vx = 0;
+          this.vy = 1500;
+          if (this.y + this.h >= GROUND) {
+            this.y = GROUND - this.h;
+            this.vy = 0;
+            g.shake(16);
+            Audio.play('kick');
+            for (const s of [-1, 1]) {
+              g.spawnHostile(new GroundWave(this.cx + s * 40, s * 460, '#d48bff'));
+              g.spawnHostile(new GroundWave(this.cx + s * 40 - s * 260, s * 460, '#d48bff'));
+            }
+            g.particles.ring(this.cx, GROUND, '#ff6fd8', 160, 0.5, 5);
+            this.setState('stunned');
+          }
+        }
+        break;
+
+      case 'stunned':
+        this.pose = 'stunned';
+        this.vx = 0;
+        this.vy = 0;
+        if (this.st > 1.5) this.setState('recover');
+        break;
+
+      case 'recover':
+        this.moveTo(this.x, this.hover, 3, dt);
+        if (this.st > 0.7) this.enterFloat();
+        break;
+
+      case 'scream':
+        this.pose = 'cast';
+        this.vx *= 0.85;
+        this.vy *= 0.85;
+        if (!this.fired) {
+          this.fired = true;
+          for (let i = 0; i < 12; i++) {
+            const a = (i / 12) * Math.PI * 2;
+            g.spawnHostile(new Orb(this.cx, this.cy, Math.cos(a) * 200, Math.sin(a) * 200, '#ff6fd8', 11, 3));
+          }
+        }
+        if (Math.random() < 0.3) g.particles.ring(this.cx, this.cy, '#d48bff', 200, 0.6, 3);
+        if (this.st > 1.5) this.enterFloat();
+        break;
+
+      case 'dying':
+        this.vx = 0;
+        this.vy = -12;
+        this.pose = 'stunned';
+        if (Math.random() < 0.6) {
+          g.particles.burst(this.cx + rand(-40, 40), this.cy + rand(-80, 80), 6, { speed: 300, color: choice(['#ffffff', '#d48bff', '#ff6fd8']), glow: true, life: 0.8, size: 3 });
+          g.shake(6);
+        }
+        if (this.st > 3 && !this.dead) {
+          this.dead = true;
+          g.flash('#ffffff', 1.2);
+          g.particles.burst(this.cx, this.cy, 80, { speed: 700, color: '#ffffff', glow: true, life: 1.2, size: 4 });
+          g.onBossDefeated(this);
+        }
+        break;
     }
   }
+
+  enterFloat() {
+    this.setState('float');
+    this.floatFor = rand(1.2, 2.2);
+    this.targetX = rand(120, W - 220);
+  }
+
   draw(ctx) {
-    if (this.done) return;
-    const appear = Math.min(1, this.t / 1.6);
-    const fade = this.state === 'fade' ? Math.max(0, 1 - this.st / 2.6) : 1;
-    const flicker = this.state === 'fade' && Math.floor(this.st * 18) % 2 ? 0.4 : 1;
-    const shake = this.laughT > 0 ? Math.sin(this.t * 60) * 2 : 0;
-    drawWitch(ctx, {
-      x: this.x + shake,
-      y: this.y + Math.sin(this.t * 1.6) * 6,
-      dir: -1,
-      t: this.t,
-      pose: this.state === 'fade' ? 'stunned' : 'cast',
-      alpha: appear * fade * flicker,
-    });
+    const alpha = this.state === 'dying' ? Math.max(0, 1 - this.st / 3) + (Math.floor(this.st * 20) % 2) * 0.3 : 1;
+    drawWitch(ctx, { x: this.cx, y: this.cy + 10, dir: this.dir, t: this.t, pose: this.pose, flash: this.flash, alpha: Math.min(1, alpha) });
   }
 }

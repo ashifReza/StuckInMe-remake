@@ -122,12 +122,12 @@ export const difficulty = (id) => DIFFICULTIES.find((d) => d.id === id) || DIFFI
 // Score needed for a power in a given difficulty (rounded to a tidy number)
 export const powerCost = (pw, diff) => Math.round((pw.at * diff.powerAt) / 10) * 10;
 
-// The twist after the Obsidian Knight falls
+// The twist after the Obsidian Knight falls; then the witch fights you herself
 export const REVEAL_LINES = [
   { who: 'Boy', text: "It's... over? I did it! Now let me WAKE UP!" },
   { who: 'Witch', text: 'Ah, ah, ah. Not so fast, little dreamer.', laugh: true },
   { who: 'Witch', text: 'A knight? Oh, sweet child... there was never any knight. It was ME. It was always me.' },
   { who: 'Boy', text: 'You were inside that armor... the whole time?' },
-  { who: 'Boy', text: 'Then nothing changes. I beat your knight. I beat your monsters. I beat YOU.' },
-  { who: 'Witch', text: 'Impossible... my curse... it is CRACKING!' },
+  { who: 'Witch', text: 'And now the armor is gone. Let me show you what I REALLY am.', laugh: true },
+  { who: 'Boy', text: 'I beat your monsters. I beat your knight. Now I beat YOU, and I WAKE UP!' },
 ];
