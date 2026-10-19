@@ -109,11 +109,12 @@ export class Game {
     return this.platforms.some((pl) => Math.abs(p.y + p.h - pl.y) < 2 && p.x + p.w > pl.x && p.x < pl.x + pl.w);
   }
 
-  fireBeam(p) {
+  // up = fired straight upward (hold ↑), for flyers and the witch
+  fireBeam(p, up = false) {
     const lucid = this.powers.has('heart');
-    this.beams.push({ dir: p.dir, t: 0, life: 0.42, hit: new Set(), h: lucid ? 64 : 44, dmg: lucid ? 8 : 5 });
+    this.beams.push({ dir: p.dir, up, t: 0, life: 0.42, hit: new Set(), h: lucid ? 64 : 44, dmg: lucid ? 8 : 5 });
     this.shake(8);
-    this.particles.ring(p.cx + p.dir * 24, p.y + 24, '#ffffff', 70, 0.35, 4);
+    this.particles.ring(up ? p.cx : p.cx + p.dir * 24, up ? p.y - 6 : p.y + 24, '#ffffff', 70, 0.35, 4);
   }
 
   spawnCrescent(p) {
@@ -283,12 +284,14 @@ export class Game {
     for (const b of this.beams) {
       b.t += dt;
       const y = p.y + 24 - b.h / 2;
-      const box = b.dir > 0 ? { x: p.cx, y, w: W, h: b.h } : { x: p.cx - W, y, w: W, h: b.h };
+      const box = b.up
+        ? { x: p.cx - b.h / 2, y: p.y - H, w: b.h, h: H }
+        : b.dir > 0 ? { x: p.cx, y, w: W, h: b.h } : { x: p.cx - W, y, w: W, h: b.h };
       if (b.t < 0.3) {
         for (const e of this.enemies) {
           if (b.hit.has(e) || e.spawning || e.dead || !aabb(box, e.hurtbox())) continue;
           b.hit.add(e);
-          this.landHit(e, { dmg: b.dmg, kb: b.dir * 500, kby: -200, type: 'beam', breaker: true }, e.cx, y + b.h / 2);
+          this.landHit(e, { dmg: b.dmg, kb: b.up ? 0 : b.dir * 500, kby: -200, type: 'beam', breaker: true }, e.cx, b.up ? e.cy : y + b.h / 2);
         }
         for (const h of this.hostiles) if (h.breakable && aabb(box, h.box)) h.dead = true;
       }
@@ -510,22 +513,25 @@ export class Game {
     }
     for (const b of this.beams) {
       const k = 1 - b.t / b.life;
-      const y = p.y + 24;
-      const x0 = p.cx + b.dir * 16;
       const len = W * Math.min(1, b.t / 0.06);
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
       const hh = b.h * (0.6 + 0.4 * k) * (1 + Math.sin(b.t * 80) * 0.08);
-      const grd = ctx.createLinearGradient(0, y - hh / 2, 0, y + hh / 2);
+      // draw along +x from the hand, rotated for direction
+      const ox = b.up ? p.cx : p.cx + b.dir * 16;
+      const oy = b.up ? p.y - 4 : p.y + 24;
+      ctx.save();
+      ctx.translate(ox, oy);
+      ctx.rotate(b.up ? -Math.PI / 2 : b.dir > 0 ? 0 : Math.PI);
+      ctx.globalCompositeOperation = 'lighter';
+      const grd = ctx.createLinearGradient(0, -hh / 2, 0, hh / 2);
       grd.addColorStop(0, 'rgba(140,190,255,0)');
       grd.addColorStop(0.5, `rgba(220,240,255,${0.9 * k})`);
       grd.addColorStop(1, 'rgba(140,190,255,0)');
       ctx.fillStyle = grd;
-      ctx.fillRect(b.dir > 0 ? x0 : x0 - len, y - hh / 2, len, hh);
+      ctx.fillRect(0, -hh / 2, len, hh);
       ctx.fillStyle = `rgba(255,255,255,${k})`;
-      ctx.fillRect(b.dir > 0 ? x0 : x0 - len, y - hh * 0.12, len, hh * 0.24);
+      ctx.fillRect(0, -hh * 0.12, len, hh * 0.24);
       ctx.restore();
-      glow(ctx, x0, y, 70, 'rgba(220,240,255,0.9)', k);
+      glow(ctx, ox, oy, 70, 'rgba(220,240,255,0.9)', k);
     }
   }
 

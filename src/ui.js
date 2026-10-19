@@ -288,7 +288,7 @@ export function drawControls(ctx) {
     ['Dash (dodge through attacks)', 'Shift'],
     ['Punch  ·  hold ↑ to uppercut', 'J  or  Z'],
     ['Kick  ·  hold ↓ in the air to dive-kick', 'K  or  X'],
-    ['Dream Beam (once unlocked, costs soul)', 'L  or  C'],
+    ['Dream Beam  ·  hold ↑ to fire upward', 'L  or  C'],
     ['Focus: hold to heal one mask', 'F  or  V'],
     ['Drop through a ledge', '↓ + Jump'],
     ['Pause  ·  Mute', 'Esc  ·  M'],

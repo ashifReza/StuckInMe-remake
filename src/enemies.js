@@ -413,10 +413,13 @@ export class Thornback extends Enemy {
 }
 
 // ---------------- Level 3: Wisp ----------------
-// A ghost-light that keeps its distance and spits slow orbs. Orbs can be punched away.
+// A ghost-light that hangs at jump height and spits slow orbs (which can be punched away).
+// After each shot it burns out for a moment and sinks within reach of the ground.
+const WISP_SPEED = 170;
+
 export class Wisp extends Enemy {
   constructor(x) {
-    super(x, rand(260, 380), 38, 42, 3);
+    super(x, rand(380, 440), 38, 42, 3);
     this.gravity = false;
     this.points = 50;
     this.eye = '#ffb8a0';
@@ -426,11 +429,18 @@ export class Wisp extends Enemy {
   ai(dt, g) {
     const p = g.player;
     this.cd -= dt;
-    const tx = p.cx + this.side * 330 - this.w / 2;
-    const ty = 300 + Math.sin(this.t * 1.7) * 60;
-    const speed = this.state === 'charge' ? 0.4 : 1.6;
-    this.vx += clamp((tx - this.x) * speed - this.vx, -1600 * dt, 1600 * dt);
-    this.vy += clamp((ty - this.y) * speed - this.vy, -1600 * dt, 1600 * dt);
+    const tired = this.state === 'tired';
+    this.contact = tired ? 0 : 1;
+    // one jump + punch reaches the idle height; tired drops to standing-punch height
+    // close in from afar, but hold position once you're near instead of fleeing
+    const near = Math.abs(p.cx - this.cx) < 300;
+    const tx = tired || near ? this.x : p.cx + this.side * 260 - this.w / 2;
+    const ty = tired ? GROUND - this.h - 20 : 410 + Math.sin(this.t * 1.7) * 30;
+    const maxV = this.state === 'charge' ? 50 : tired ? 320 : WISP_SPEED;
+    const wantVx = clamp((tx - this.x) * 1.5, -maxV, maxV);
+    const wantVy = clamp((ty - this.y) * (tired ? 6 : 1.5), -maxV, maxV);
+    this.vx += clamp(wantVx - this.vx, -900 * dt, 900 * dt);
+    this.vy += clamp(wantVy - this.vy, -(tired ? 1800 : 900) * dt, (tired ? 1800 : 900) * dt);
     this.dir = sign(p.cx - this.cx);
     if (this.state === 'idle' && this.cd <= 0) this.setState('charge');
     if (this.state === 'charge' && this.st > 0.7) {
@@ -439,6 +449,9 @@ export class Wisp extends Enemy {
       const d = Math.hypot(dx, dy) || 1;
       g.spawnHostile(new Orb(this.cx, this.cy, (dx / d) * 290, (dy / d) * 290, this.eye));
       Audio.play('shoot');
+      this.setState('tired');
+    }
+    if (tired && this.st > 1.6) {
       this.setState('idle');
       this.cd = rand(2, 2.8);
       if (Math.random() < 0.3) this.side *= -1;
@@ -447,11 +460,12 @@ export class Wisp extends Enemy {
   draw(ctx) {
     if (this.spawning) return this.drawSpawn(ctx);
     const charge = this.state === 'charge' ? this.st / 0.7 : 0;
-    glow(ctx, this.cx, this.cy, 70 + charge * 50, 'rgba(255,150,120,0.55)');
+    const tired = this.state === 'tired';
+    glow(ctx, this.cx, this.cy, tired ? 45 : 70 + charge * 50, 'rgba(255,150,120,0.55)');
     ctx.save();
     ctx.translate(this.cx, this.cy);
     ctx.globalCompositeOperation = 'lighter';
-    ctx.fillStyle = this.flash > 0 ? '#fff' : 'rgba(255,190,160,0.75)';
+    ctx.fillStyle = this.flash > 0 ? '#fff' : tired ? 'rgba(170,120,110,0.6)' : 'rgba(255,190,160,0.75)';
     ctx.beginPath();
     ctx.moveTo(0, -30 - Math.sin(this.t * 9) * 5);
     ctx.quadraticCurveTo(18, -8, 14, 6);

@@ -32,7 +32,7 @@ Then open http://localhost:8765.
 | Dash (dodges through attacks) | Shift |
 | Punch (hold ↑ to uppercut) | J or Z |
 | Kick (hold ↓ in the air to dive-kick and bounce) | K or X |
-| Dream Beam (once unlocked, costs soul) | L or C |
+| Dream Beam (once unlocked, costs soul; hold ↑ to fire upward) | L or C |
 | Focus: hold to heal one mask | F or V |
 | Drop through a ledge | ↓ + Jump |
 | Pause / Mute | Esc / M |
@@ -42,7 +42,7 @@ Then open http://localhost:8765.
 - **Storyboard intro**: six illustrated panels with speech bubbles, clicked through one at a time.
 - **Level 1, The Whispering Woods**: Shadelings crawl closer, crouch, then pounce.
 - **Level 2, Moth Hollow**: Dusk Moths hover out of reach, then dive at you.
-- **Level 3, The Thorn Garden**: armored Thornbacks curl up and roll; Wisps spit orbs (which you can punch away).
+- **Level 3, The Thorn Garden**: armored Thornbacks curl up and roll; Wisps hover at jump height and spit orbs (which you can punch away), then sink within reach for a moment after each shot.
 - **Level 4, The Witch's Heart**: Morwen, the Wicked Witch, has her own health bar and three phases: homing hex orbs, a floor-raking swoop that leaves her stunned, thorns from the ground, summoned minions, and slam shockwaves.
 
 Clear a level's creature quota and a dream-door opens to the next one.

@@ -115,7 +115,8 @@ export class Player {
         else {
           this.soul -= SOUL_COST;
           this.startAttack('beam', g);
-          g.fireBeam(this);
+          this.beamUp = upH;
+          g.fireBeam(this, upH);
         }
       }
     }
@@ -274,7 +275,7 @@ export class Player {
 
   pose() {
     if (this.dead) return 'hurt';
-    if (this.atk) return this.atk.type;
+    if (this.atk) return this.atk.type === 'beam' && this.beamUp ? 'upPunch' : this.atk.type;
     if (this.dashT > 0) return 'dash';
     if (this.hurtT > 0) return 'hurt';
     if (this.focusT > 0) return 'focus';
